@@ -186,7 +186,7 @@ class InventarioApp(App):
 
     # -----------------------------------
     # ALERTA POPUP
-    # -----------------------------------
+    # ------------------------------------
     def alerta(self, mensaje):
         pop = Popup(title="Información",
                     content=Label(text=mensaje),
@@ -196,3 +196,38 @@ class InventarioApp(App):
 
 if _name_ == "_main_":
     InventarioApp().run()
+
+#INVENTARIO
+
+[
+  {
+    "nombre": "nepe",
+    "desc": "gr4nd3",
+    "img": "..."
+  },
+  {
+    "nombre": "Filtro Suzuki K&N KN-138",
+    "desc": "Equivalencias: Suzuki V-Strom 650, GSX-R600, GSX-R750, SV650, DL650 y otros modelos Suzuki.",
+    "img": ""
+  },
+  {
+    "nombre": "Filtro Honda Hiflo HF-204",
+    "desc": "Equivalencias: Honda CB500, CBR600RR, CB650F, NC700, NC750, CB500X, Hornet 600.",
+    "img": ""
+  },
+  {
+    "nombre": "Filtro Yamaha Hiflo HF-204",
+    "desc": "Equivalencias: Yamaha MT-07, FZ-07, XSR700, Ténéré 700, Tracer 700.",
+    "img": ""
+  },
+  {
+    "nombre": "Filtro Yamaha Hiflo HF-303",
+    "desc": "Equivalencias: Yamaha R1, R6, MT-09 (modelos anteriores), FZ1, XJR1300.",
+    "img": ""
+  },
+  {
+    "nombre": "Carguero Bitrix (Filtro de Aire)",
+    "desc": "Filtro de aire compatible con cargueros Bitrix tipo mototaxi.",
+    "img": ""
+  }
+]
