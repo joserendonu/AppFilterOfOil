@@ -262,33 +262,28 @@ if _name_ == "_main_":
 
 [
   {
-    "nombre": "nepe",
-    "desc": "gr4nd3",
-    "img": "..."
-  },
-  {
     "nombre": "Filtro Suzuki K&N KN-138",
-    "desc": "Equivalencias: Suzuki V-Strom 650, GSX-R600, GSX-R750, SV650, DL650 y otros modelos Suzuki.",
+    "desc": "Equivalencias: Suzuki V-Strom 650 (DL650), Suzuki SV650, Suzuki Gladius 650, Suzuki Bandit 600 (GSF600), Suzuki Bandit 650 (GSF650), Suzuki GS 500, Suzuki GSX 650F, Suzuki GSX 750F, Suzuki GSX-R 600, Suzuki GSX-R 750, Suzuki GSX-R 1000, Suzuki Burgman 650, Suzuki Intruder C800, Suzuki Intruder C1500, Suzuki Intruder C1800",
     "img": ""
   },
   {
     "nombre": "Filtro Honda Hiflo HF-204",
-    "desc": "Equivalencias: Honda CB500, CBR600RR, CB650F, NC700, NC750, CB500X, Hornet 600.",
+    "desc": "Equivalencias: Honda CB650 F, Honda CB650 R, Honda CBR650 F, Honda CBR650 R, Honda CB1000 R/RA, Honda CBF1000, Honda CBR1000 RR Fireblade, Honda CBR1000 RR SP, Honda CRF1000 Africa Twin, Honda CRF1100L Africa Twin, Honda CMX1100 Rebel, Honda NC700 S, Honda NC700 Integra, Honda NC750 S, Honda CBR600 RR, Honda CBR500 R, Honda CB500 F/FA, Honda CB500 X, Honda CL500, Honda GL1800 Gold Wing, Honda GL1800 Valkyrie F6C, Honda FJS400 Silver Wing, Honda FJS600 Silver Wing, Honda CTX700, Honda CTX1300, Honda XL700 V Transalp, Honda XL1000 V Varadero, Honda X-ADV 750, Honda VT750 C2 Shadow, Honda VTR1000 F Firestorm, Honda VTX1300, Honda CB1100, Honda CB1300, Honda CB1000 R Neo Sports Cafe, Honda CB500 F/X (varios años), Honda Forza 250, Honda SH300, Honda Silver Wing 600, Yamaha Tracer 900, Yamaha XJ6, Yamaha T-Max 530",
     "img": ""
   },
   {
     "nombre": "Filtro Yamaha Hiflo HF-204",
-    "desc": "Equivalencias: Yamaha MT-07, FZ-07, XSR700, Ténéré 700, Tracer 700.",
+    "desc": "Equivalencias: Yamaha R3, Yamaha FZ1000 / Fazer 998, Yamaha FZ8 800, Yamaha YZF-R1, Yamaha YZF-R6, Yamaha XVS 1300A Midnight Star, Yamaha XVS 950A Midnight Star, Yamaha FZ1, Yamaha FZ1 Fazer, Yamaha FZ6",
     "img": ""
   },
   {
     "nombre": "Filtro Yamaha Hiflo HF-303",
-    "desc": "Equivalencias: Yamaha R1, R6, MT-09 (modelos anteriores), FZ1, XJR1300.",
+    "desc": "Yamaha FZR600, Yamaha FZR600R, Yamaha XV1600 Wild Star, Yamaha XVS1300A Midnight Star, Yamaha YZF600R Thundercat",
     "img": ""
   },
   {
-    "nombre": "Carguero Bitrix (Filtro de Aire)",
-    "desc": "Filtro de aire compatible con cargueros Bitrix tipo mototaxi.",
+    "nombre": "ZSRR 150",
+    "desc": "Yamaha SZRR 150, Yamaha FZ16, Yamaha FZ FI 2.0, Yamaha SZ-150RR",
     "img": ""
   }
 ]
