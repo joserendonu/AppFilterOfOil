@@ -20,6 +20,7 @@ from kivy.uix.popup import Popup
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.filechooser import FileChooserListView
 from kivy.graphics import Color, RoundedRectangle
+import fnmatch
 
 DATA_FILE = "inventario.json"
 IMG_FOLDER = "fotos"
@@ -32,13 +33,30 @@ class InventarioApp(App):
 
     def build(self):
         self.items = self.cargar_inventario()
+        self.filtro_texto = ""
 
-        root = BoxLayout(orientation="vertical")
+        root = BoxLayout(orientation="vertical", padding=dp(5), spacing=dp(5))
 
-        btn_add = Button(text="➕ Agregar producto", size_hint=(1, None), height=dp(55), background_color=(0.2, 0.6, 1, 1))
+        # Barra de búsqueda
+        filtro_layout = BoxLayout(orientation="horizontal", size_hint_y=None, height=dp(50), spacing=dp(5))
+        self.filtro_input = TextInput(hint_text="🔍 Buscar (usa * para comodín)", multiline=False)
+        btn_buscar = Button(text="Buscar", size_hint_x=None, width=dp(100), background_color=(0.3, 0.7, 1, 1))
+        btn_buscar.bind(on_press=self.aplicar_filtro)
+        filtro_layout.add_widget(self.filtro_input)
+        filtro_layout.add_widget(btn_buscar)
+        root.add_widget(filtro_layout)
+
+        # Botón de agregar
+        btn_add = Button(
+            text="➕ Agregar producto",
+            size_hint=(1, None),
+            height=dp(55),
+            background_color=(0.2, 0.6, 1, 1)
+        )
         btn_add.bind(on_press=self.popup_agregar)
         root.add_widget(btn_add)
 
+        # Lista de productos
         scroll = ScrollView(size_hint=(1, 1))
         self.lista = GridLayout(cols=1, spacing=dp(10), size_hint_y=None, padding=dp(10))
         self.lista.bind(minimum_height=self.lista.setter("height"))
@@ -76,7 +94,12 @@ class InventarioApp(App):
         btn_galeria = Button(text="🖼 Seleccionar foto de galería", size_hint_y=None, height=dp(40))
         btn_galeria.bind(on_press=self.abrir_galeria)
 
-        btn_guardar = Button(text="Guardar", background_color=(0, 1, 0, 1), size_hint_y=None, height=dp(45))
+        btn_guardar = Button(
+            text="Guardar",
+            background_color=(0, 1, 0, 1),
+            size_hint_y=None,
+            height=dp(45)
+        )
         btn_guardar.bind(on_press=self.guardar_item)
 
         layout.add_widget(self.in_nombre)
@@ -144,13 +167,39 @@ class InventarioApp(App):
         self.popup.dismiss()
 
     # -----------------------------------
-    # ACTUALIZAR LISTA (con saltos de línea)
+    # APLICAR FILTRO
+    # -----------------------------------
+    def aplicar_filtro(self, *args):
+        self.filtro_texto = self.filtro_input.text.strip().lower()
+        self.actualizar_lista()
+
+    # -----------------------------------
+    # ACTUALIZAR LISTA (con filtro y saltos de línea)
     # -----------------------------------
     def actualizar_lista(self):
         self.lista.clear_widgets()
+        filtro = self.filtro_texto
 
         for index, item in enumerate(self.items):
-            contenedor = BoxLayout(orientation="horizontal", size_hint_y=None, padding=dp(5), spacing=dp(10))
+            nombre = item["nombre"].lower()
+            desc = item["desc"].lower()
+
+            # Si hay filtro, se aplica con comodín (*)
+            if filtro:
+                patron = filtro.replace(" ", "*")
+                coincide = (
+                    fnmatch.fnmatch(nombre, f"{patron}") or
+                    fnmatch.fnmatch(desc, f"{patron}")
+                )
+                if not coincide:
+                    continue  # No coincide, no se muestra
+
+            contenedor = BoxLayout(
+                orientation="horizontal",
+                size_hint_y=None,
+                padding=dp(5),
+                spacing=dp(10)
+            )
             contenedor.height = dp(230)
 
             # Fondo gris suave
@@ -170,7 +219,6 @@ class InventarioApp(App):
             info = BoxLayout(orientation="vertical", size_hint=(0.65, None), spacing=dp(10))
             info.height = dp(200)
 
-            # Nombre con salto de línea abajo
             lbl_nombre = Label(
                 text=f"[b]{item['nombre']}[/b]\n",
                 markup=True,
@@ -183,7 +231,6 @@ class InventarioApp(App):
             lbl_nombre.texture_update()
             lbl_nombre.height = lbl_nombre.texture_size[1] + dp(10)
 
-            # Descripción con salto al final
             lbl_desc = Label(
                 text=f"{item['desc']}\n\n",
                 font_size='14sp',
@@ -195,7 +242,7 @@ class InventarioApp(App):
             lbl_desc.texture_update()
             lbl_desc.height = lbl_desc.texture_size[1] + dp(10)
 
-            # Botones
+            # Botones editar / eliminar
             btn_layout = BoxLayout(size_hint_y=None, height=dp(35), spacing=dp(12), padding=(0, dp(5)))
             btn_editar = Button(text="✏️", size_hint=(None, None), width=dp(40), height=dp(35))
             btn_eliminar = Button(text="🗑️", size_hint=(None, None), width=dp(40), height=dp(35))
@@ -222,7 +269,12 @@ class InventarioApp(App):
         layout = BoxLayout(orientation="vertical", padding=dp(10), spacing=dp(10))
         in_nombre = TextInput(text=item["nombre"], size_hint_y=None, height=dp(45))
         in_desc = TextInput(text=item["desc"], size_hint_y=None, height=dp(100))
-        btn_guardar = Button(text="Guardar cambios", size_hint_y=None, height=dp(45), background_color=(0, 1, 0, 1))
+        btn_guardar = Button(
+            text="Guardar cambios",
+            size_hint_y=None,
+            height=dp(45),
+            background_color=(0, 1, 0, 1)
+        )
 
         layout.add_widget(in_nombre)
         layout.add_widget(in_desc)
@@ -261,29 +313,69 @@ if _name_ == "_main_":
 #INVENTARIO
 
 [
-  {
-    "nombre": "Filtro Suzuki K&N KN-138",
-    "desc": "Equivalencias: Suzuki V-Strom 650 (DL650), Suzuki SV650, Suzuki Gladius 650, Suzuki Bandit 600 (GSF600), Suzuki Bandit 650 (GSF650), Suzuki GS 500, Suzuki GSX 650F, Suzuki GSX 750F, Suzuki GSX-R 600, Suzuki GSX-R 750, Suzuki GSX-R 1000, Suzuki Burgman 650, Suzuki Intruder C800, Suzuki Intruder C1500, Suzuki Intruder C1800",
-    "img": ""
-  },
-  {
-    "nombre": "Filtro Honda Hiflo HF-204",
-    "desc": "Equivalencias: Honda CB650 F, Honda CB650 R, Honda CBR650 F, Honda CBR650 R, Honda CB1000 R/RA, Honda CBF1000, Honda CBR1000 RR Fireblade, Honda CBR1000 RR SP, Honda CRF1000 Africa Twin, Honda CRF1100L Africa Twin, Honda CMX1100 Rebel, Honda NC700 S, Honda NC700 Integra, Honda NC750 S, Honda CBR600 RR, Honda CBR500 R, Honda CB500 F/FA, Honda CB500 X, Honda CL500, Honda GL1800 Gold Wing, Honda GL1800 Valkyrie F6C, Honda FJS400 Silver Wing, Honda FJS600 Silver Wing, Honda CTX700, Honda CTX1300, Honda XL700 V Transalp, Honda XL1000 V Varadero, Honda X-ADV 750, Honda VT750 C2 Shadow, Honda VTR1000 F Firestorm, Honda VTX1300, Honda CB1100, Honda CB1300, Honda CB1000 R Neo Sports Cafe, Honda CB500 F/X (varios años), Honda Forza 250, Honda SH300, Honda Silver Wing 600, Yamaha Tracer 900, Yamaha XJ6, Yamaha T-Max 530",
-    "img": ""
-  },
-  {
-    "nombre": "Filtro Yamaha Hiflo HF-204",
-    "desc": "Equivalencias: Yamaha R3, Yamaha FZ1000 / Fazer 998, Yamaha FZ8 800, Yamaha YZF-R1, Yamaha YZF-R6, Yamaha XVS 1300A Midnight Star, Yamaha XVS 950A Midnight Star, Yamaha FZ1, Yamaha FZ1 Fazer, Yamaha FZ6",
-    "img": ""
-  },
-  {
-    "nombre": "Filtro Yamaha Hiflo HF-303",
-    "desc": "Yamaha FZR600, Yamaha FZR600R, Yamaha XV1600 Wild Star, Yamaha XVS1300A Midnight Star, Yamaha YZF600R Thundercat",
-    "img": ""
-  },
-  {
-    "nombre": "ZSRR 150",
-    "desc": "Yamaha SZRR 150, Yamaha FZ16, Yamaha FZ FI 2.0, Yamaha SZ-150RR",
-    "img": ""
-  }
+    {
+        "nombre": "Filtro Suzuki K&N KN-138 el grande metalico",
+        "desc": "Equivalencias: Suzuki V-Strom 650, GSX-R600, GSX-R750, SV650, DL650 y otros modelos Suzuki...",
+        "img": ""
+    },
+    {
+        "nombre": "Filtro Honda Hiflo HF-204",
+        "desc": "Equivalencias: Honda CB500, CBR600RR, CB650F, NC700, NC750, CB500X, Hornet 600.",
+        "img": ""
+    },
+    {
+        "nombre": "Filtro Yamaha Hiflo HF-204",
+        "desc": "Equivalencias: Yamaha MT-07, FZ-07, XSR700, T\u00e9n\u00e9r\u00e9 700, Tracer 700.",
+        "img": ""
+    },
+    {
+        "nombre": "Filtro Yamaha Hiflo HF-303",
+        "desc": "Equivalencias: Yamaha R1, R6, MT-09 (modelos anteriores), FZ1, XJR1300.",
+        "img": ""
+    },
+    {
+        "nombre": "Carguero Bitrix (Filtro aceite mediano metalico",
+        "desc": "Filtro de aire compatible con cargueros Bitrix tipo mototaxi.",
+        "img": ""
+    },
+    {
+        "nombre": "boxer",
+        "desc": "Boxer (CT 100, BM 100, BM 150), Platino(100, 110, 125), Discover (100, 125 ST, 135, 150), Pulsar (135 LS, NS 125, NS 150, NS 160) y V15.\n\u200bYamaha: FZ16, FZ 2.0, Fazer 150, SZ-R 153 y XTZ 150.\n\u200bOtras: XCD 125, Wind 125, Caliber 115",
+        "img": "/storage/emulated/0/DCIM/Camera/IMG_20251223_090834.jpg"
+    },
+    {
+        "nombre": "ns 200",
+        "desc": "\u200bBajaj: Pulsar NS 160, NS 125, AS 200, RS 200 y Dominar 250/400.\n\u200bKTM: Duke 125, 200, 250 y 390; RC 200 y 390.\n\u200bHusqvarna: Svartpilen 200/401 y Vitpilen 401",
+        "img": ""
+    },
+    {
+        "nombre": "ns200",
+        "desc": "hahshdvdbbrbrbr cvvvcccvvvcc",
+        "img": ""
+    },
+    {
+        "nombre": "ns200",
+        "desc": "",
+        "img": "/storage/emulated/0/DCIM/Screenshots/Screenshot_2025-12-26-17-25-20-095_com.whatsapp-edit.jpg"
+    },
+    {
+        "nombre": "nkd",
+        "desc": "AKT: Modelos SL, SLR, NKDR, Evo (125/150), TT (125/150/180), TTR, TTX, CR5 180, XM 180 y XM 200",
+        "img": ""
+    },
+    {
+        "nombre": "dr",
+        "desc": "dr650",
+        "img": "fotos/foto_20260121_122351.jpg"
+    },
+    {
+        "nombre": "r15",
+        "desc": "FZ25, Fazer 250, XTZ 250 (Lander/T\u00e9n\u00e9r\u00e9), MT-15, Crypton 115 (FI), YBR 250 y XT 225.",
+        "img": ""
+    },
+    {
+        "nombre": "gn 125 rtr",
+        "desc": "GS 125, GZ 150, DR 200, AN 125/150, Burgman 125.\n\u200bKeeway: RK-III, Superlight 200, TX 200.\n\u200bHaojue: TR 150, NK 150",
+        "img": ""
+    }
 ]
