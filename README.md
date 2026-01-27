@@ -6,24 +6,19 @@ VOY A INTENTAR CON LAS IMAGENES LLENAR EL INVENTARIO DE TAL MANERA QUE SOLO SEA 
 
 import os
 import json
-import subprocess
-from datetime import datetime
+import shutil
 from kivy.app import App
-from kivy.metrics import dp
 from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.gridlayout import GridLayout
 from kivy.uix.image import Image
+from kivy.uix.label import Label
 from kivy.uix.textinput import TextInput
 from kivy.uix.button import Button
-from kivy.uix.label import Label
-from kivy.uix.popup import Popup
 from kivy.uix.scrollview import ScrollView
+from kivy.uix.popup import Popup
 from kivy.uix.filechooser import FileChooserListView
-from kivy.graphics import Color, RoundedRectangle
-import fnmatch
 
 DATA_FILE = "inventario.json"
-IMG_FOLDER = "fotos"
+IMG_FOLDER = "/storage/emulated/0/InventarioFotos"
 
 if not os.path.exists(IMG_FOLDER):
     os.makedirs(IMG_FOLDER)
@@ -32,284 +27,217 @@ if not os.path.exists(IMG_FOLDER):
 class InventarioApp(App):
 
     def build(self):
-        self.items = self.cargar_inventario()
-        self.filtro_texto = ""
+        self.data = self.cargar_datos()
+        self.editando = None
 
-        root = BoxLayout(orientation="vertical", padding=dp(5), spacing=dp(5))
+        root = BoxLayout(orientation="vertical", padding=8, spacing=8)
 
-        # Barra de búsqueda
-        filtro_layout = BoxLayout(orientation="horizontal", size_hint_y=None, height=dp(50), spacing=dp(5))
-        self.filtro_input = TextInput(hint_text="🔍 Buscar (usa * para comodín)", multiline=False)
-        btn_buscar = Button(text="Buscar", size_hint_x=None, width=dp(100), background_color=(0.3, 0.7, 1, 1))
-        btn_buscar.bind(on_press=self.aplicar_filtro)
-        filtro_layout.add_widget(self.filtro_input)
-        filtro_layout.add_widget(btn_buscar)
-        root.add_widget(filtro_layout)
-
-        # Botón de agregar
-        btn_add = Button(
-            text="➕ Agregar producto",
-            size_hint=(1, None),
-            height=dp(55),
-            background_color=(0.2, 0.6, 1, 1)
+        self.busqueda = TextInput(
+            hint_text="Buscar por nombre, referencia o descripción",
+            size_hint_y=None,
+            height=45
         )
-        btn_add.bind(on_press=self.popup_agregar)
-        root.add_widget(btn_add)
+        self.busqueda.bind(text=self.actualizar_lista)
+        root.add_widget(self.busqueda)
 
-        # Lista de productos
-        scroll = ScrollView(size_hint=(1, 1))
-        self.lista = GridLayout(cols=1, spacing=dp(10), size_hint_y=None, padding=dp(10))
+        self.lista = BoxLayout(
+            orientation="vertical",
+            spacing=12,
+            size_hint_y=None
+        )
         self.lista.bind(minimum_height=self.lista.setter("height"))
+
+        scroll = ScrollView()
         scroll.add_widget(self.lista)
         root.add_widget(scroll)
+
+        btn_agregar = Button(
+            text="Agregar producto",
+            size_hint_y=None,
+            height=50
+        )
+        btn_agregar.bind(on_press=self.popup_agregar)
+        root.add_widget(btn_agregar)
 
         self.actualizar_lista()
         return root
 
-    # -----------------------------------
-    # CARGAR Y GUARDAR INVENTARIO
-    # -----------------------------------
-    def cargar_inventario(self):
+    # ---------- DATOS ----------
+
+    def cargar_datos(self):
         if os.path.exists(DATA_FILE):
-            with open(DATA_FILE, "r") as f:
+            with open(DATA_FILE, "r", encoding="utf-8") as f:
                 return json.load(f)
         return []
 
-    def guardar_inventario(self):
-        with open(DATA_FILE, "w") as f:
-            json.dump(self.items, f, indent=4)
+    def guardar_datos(self):
+        with open(DATA_FILE, "w", encoding="utf-8") as f:
+            json.dump(self.data, f, indent=4, ensure_ascii=False)
 
-    # -----------------------------------
-    # POPUP PARA AGREGAR PRODUCTO
-    # -----------------------------------
-    def popup_agregar(self, *args):
-        layout = BoxLayout(orientation="vertical", padding=dp(10), spacing=dp(10))
+    # ---------- LISTA ----------
 
-        self.in_nombre = TextInput(hint_text="Nombre", size_hint_y=None, height=dp(45))
-        self.in_desc = TextInput(hint_text="Descripción", size_hint_y=None, height=dp(100))
+    def actualizar_lista(self, *args):
+        texto = self.busqueda.text.lower()
+        self.lista.clear_widgets()
 
-        btn_foto = Button(text="📸 Tomar foto (cámara nativa)", size_hint_y=None, height=dp(40))
-        btn_foto.bind(on_press=self.tomar_foto)
+        for item in self.data:
+            combinado = f"{item.get('nombre','')} {item.get('ref','')} {item.get('desc','')}".lower()
+            if texto in combinado:
+                self.lista.add_widget(self.tarjeta(item))
 
-        btn_galeria = Button(text="🖼 Seleccionar foto de galería", size_hint_y=None, height=dp(40))
-        btn_galeria.bind(on_press=self.abrir_galeria)
-
-        btn_guardar = Button(
-            text="Guardar",
-            background_color=(0, 1, 0, 1),
+    def tarjeta(self, item):
+        contenedor = BoxLayout(
+            orientation="vertical",
             size_hint_y=None,
-            height=dp(45)
+            padding=8,
+            spacing=6
         )
-        btn_guardar.bind(on_press=self.guardar_item)
 
-        layout.add_widget(self.in_nombre)
-        layout.add_widget(self.in_desc)
-        layout.add_widget(btn_foto)
-        layout.add_widget(btn_galeria)
+        ruta_img = item.get("img", "")
+        img = Image(
+            source=ruta_img if os.path.exists(ruta_img) else "",
+            size_hint_y=None,
+            height=180,
+            allow_stretch=True,
+            keep_ratio=True
+        )
+        contenedor.add_widget(img)
+
+        def crear_label(texto):
+            lbl = Label(
+                text=texto,
+                markup=True,
+                halign="left",
+                valign="top",
+                size_hint_y=None
+            )
+            lbl.bind(
+                width=lambda s, w: setattr(s, "text_size", (w - 10, None)),
+                texture_size=lambda s, ts: setattr(s, "height", ts[1] + 10)
+            )
+            return lbl
+
+        contenedor.add_widget(crear_label(f"[b]Nombre:[/b] {item.get('nombre','')}"))
+        contenedor.add_widget(crear_label(f"[b]Referencia:[/b] {item.get('ref','')}"))
+        contenedor.add_widget(crear_label(f"[b]Descripción:[/b]\n{item.get('desc','')}"))
+
+        botones = BoxLayout(size_hint_y=None, height=40, spacing=10)
+
+        btn_editar = Button(text="Editar")
+        btn_editar.bind(on_press=lambda x, i=item: self.popup_editar(i))
+
+        btn_borrar = Button(text="Eliminar")
+        btn_borrar.bind(on_press=lambda x, i=item: self.eliminar(i))
+
+        botones.add_widget(btn_editar)
+        botones.add_widget(btn_borrar)
+
+        contenedor.add_widget(botones)
+
+        contenedor.bind(
+            minimum_height=lambda s, h: setattr(s, "height", h)
+        )
+
+        return contenedor
+
+    # ---------- POPUPS ----------
+
+    def popup_agregar(self, *_):
+        self.editando = None
+        self.popup_formulario("Agregar producto")
+
+    def popup_editar(self, item):
+        self.editando = item
+        self.popup_formulario("Editar producto", item)
+
+    def popup_formulario(self, titulo, item=None):
+        layout = BoxLayout(orientation="vertical", spacing=8, padding=8)
+
+        self.nombre = TextInput(hint_text="Nombre")
+        self.ref = TextInput(hint_text="Referencia")
+        self.desc = TextInput(hint_text="Descripción")
+
+        self.ruta_img = ""
+
+        if item:
+            self.nombre.text = item.get("nombre", "")
+            self.ref.text = item.get("ref", "")
+            self.desc.text = item.get("desc", "")
+            self.ruta_img = item.get("img", "")
+
+        btn_img = Button(text="Seleccionar imagen", size_hint_y=None, height=45)
+        btn_img.bind(on_press=self.selector_imagen)
+
+        btn_guardar = Button(text="Guardar", size_hint_y=None, height=45)
+        btn_guardar.bind(on_press=self.guardar_producto)
+
+        layout.add_widget(self.nombre)
+        layout.add_widget(self.ref)
+        layout.add_widget(self.desc)
+        layout.add_widget(btn_img)
         layout.add_widget(btn_guardar)
 
-        self.ruta_foto = ""
-        self.popup = Popup(title="Agregar producto", content=layout, size_hint=(0.9, 0.9))
+        self.popup = Popup(title=titulo, content=layout, size_hint=(0.9, 0.9))
         self.popup.open()
 
-    # -----------------------------------
-    # TOMAR FOTO SIN PLYER
-    # -----------------------------------
-    def tomar_foto(self, *args):
-        nombre = f"foto_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
-        ruta = os.path.join(IMG_FOLDER, nombre)
+    # ---------- IMAGEN ----------
 
-        cmd = ["am", "start", "-a", "android.media.action.IMAGE_CAPTURE", "-o", ruta]
+    def selector_imagen(self, *_):
+        chooser = FileChooserListView(filters=["*.png", "*.jpg", "*.jpeg"])
+        btn = Button(text="Usar imagen", size_hint_y=None, height=45)
 
-        try:
-            subprocess.run(cmd)
-            self.ruta_foto = ruta
-            self.alerta("📸 La cámara se abrió.\nCuando tomes la foto, volverás aquí.")
-        except Exception:
-            self.alerta("❌ Error al abrir la cámara.\nActiva permisos para Pydroid.")
+        box = BoxLayout(orientation="vertical")
+        box.add_widget(chooser)
+        box.add_widget(btn)
 
-    # -----------------------------------
-    # SELECCIONAR FOTO DESDE GALERÍA
-    # -----------------------------------
-    def abrir_galeria(self, *args):
-        chooser = FileChooserListView(filters=[".jpg", ".png", "*.jpeg"])
-        btn_sel = Button(text="Seleccionar", size_hint_y=None, height=dp(45))
+        popup = Popup(title="Seleccionar imagen", content=box, size_hint=(0.9, 0.9))
 
-        layout = BoxLayout(orientation="vertical")
-        layout.add_widget(chooser)
-        layout.add_widget(btn_sel)
-
-        pop = Popup(title="Seleccionar imagen", content=layout, size_hint=(0.9, 0.9))
-
-        def seleccionar(instance):
+        def seleccionar(*_):
             if chooser.selection:
-                self.ruta_foto = chooser.selection[0]
-                pop.dismiss()
+                origen = chooser.selection[0]
+                destino = os.path.join(IMG_FOLDER, os.path.basename(origen))
+                shutil.copy(origen, destino)
+                self.ruta_img = destino
+                popup.dismiss()
 
-        btn_sel.bind(on_press=seleccionar)
-        pop.open()
-
-    # -----------------------------------
-    # GUARDAR ITEM
-    # -----------------------------------
-    def guardar_item(self, *args):
-        nombre = self.in_nombre.text.strip()
-        desc = self.in_desc.text.strip()
-
-        if nombre == "":
-            self.alerta("⚠ El nombre no puede estar vacío.")
-            return
-
-        item = {"nombre": nombre, "desc": desc, "img": self.ruta_foto}
-        self.items.append(item)
-        self.guardar_inventario()
-        self.actualizar_lista()
-        self.popup.dismiss()
-
-    # -----------------------------------
-    # APLICAR FILTRO
-    # -----------------------------------
-    def aplicar_filtro(self, *args):
-        self.filtro_texto = self.filtro_input.text.strip().lower()
-        self.actualizar_lista()
-
-    # -----------------------------------
-    # ACTUALIZAR LISTA (con filtro y saltos de línea)
-    # -----------------------------------
-    def actualizar_lista(self):
-        self.lista.clear_widgets()
-        filtro = self.filtro_texto
-
-        for index, item in enumerate(self.items):
-            nombre = item["nombre"].lower()
-            desc = item["desc"].lower()
-
-            # Si hay filtro, se aplica con comodín (*)
-            if filtro:
-                patron = filtro.replace(" ", "*")
-                coincide = (
-                    fnmatch.fnmatch(nombre, f"{patron}") or
-                    fnmatch.fnmatch(desc, f"{patron}")
-                )
-                if not coincide:
-                    continue  # No coincide, no se muestra
-
-            contenedor = BoxLayout(
-                orientation="horizontal",
-                size_hint_y=None,
-                padding=dp(5),
-                spacing=dp(10)
-            )
-            contenedor.height = dp(230)
-
-            # Fondo gris suave
-            with contenedor.canvas.before:
-                Color(0.2, 0.2, 0.2, 0.3)
-                contenedor.bg = RoundedRectangle(radius=[dp(10)], pos=contenedor.pos, size=contenedor.size)
-            contenedor.bind(pos=lambda , _: setattr(contenedor.bg, "pos", contenedor.pos))
-            contenedor.bind(size=lambda , _: setattr(contenedor.bg, "size", contenedor.size))
-
-            # Imagen
-            if item["img"] and os.path.exists(item["img"]):
-                img = Image(source=item["img"], size_hint=(0.35, None), height=dp(200))
-            else:
-                img = Label(text="📦", font_size='35sp', size_hint=(0.35, None), height=dp(200))
-
-            # Texto y botones
-            info = BoxLayout(orientation="vertical", size_hint=(0.65, None), spacing=dp(10))
-            info.height = dp(200)
-
-            lbl_nombre = Label(
-                text=f"[b]{item['nombre']}[/b]\n",
-                markup=True,
-                font_size='17sp',
-                size_hint_y=None,
-                halign="left",
-                valign="middle"
-            )
-            lbl_nombre.bind(size=lambda s, _: setattr(s, "text_size", (s.width, None)))
-            lbl_nombre.texture_update()
-            lbl_nombre.height = lbl_nombre.texture_size[1] + dp(10)
-
-            lbl_desc = Label(
-                text=f"{item['desc']}\n\n",
-                font_size='14sp',
-                size_hint_y=None,
-                halign="left",
-                valign="top"
-            )
-            lbl_desc.bind(size=lambda s, _: setattr(s, "text_size", (s.width, None)))
-            lbl_desc.texture_update()
-            lbl_desc.height = lbl_desc.texture_size[1] + dp(10)
-
-            # Botones editar / eliminar
-            btn_layout = BoxLayout(size_hint_y=None, height=dp(35), spacing=dp(12), padding=(0, dp(5)))
-            btn_editar = Button(text="✏️", size_hint=(None, None), width=dp(40), height=dp(35))
-            btn_eliminar = Button(text="🗑️", size_hint=(None, None), width=dp(40), height=dp(35))
-            btn_layout.add_widget(btn_editar)
-            btn_layout.add_widget(btn_eliminar)
-
-            btn_editar.bind(on_press=lambda inst, i=index: self.editar_item(i))
-            btn_eliminar.bind(on_press=lambda inst, i=index: self.eliminar_item(i))
-
-            info.add_widget(lbl_nombre)
-            info.add_widget(lbl_desc)
-            info.add_widget(btn_layout)
-
-            contenedor.add_widget(img)
-            contenedor.add_widget(info)
-            self.lista.add_widget(contenedor)
-
-    # -----------------------------------
-    # EDITAR ITEM
-    # -----------------------------------
-    def editar_item(self, index):
-        item = self.items[index]
-
-        layout = BoxLayout(orientation="vertical", padding=dp(10), spacing=dp(10))
-        in_nombre = TextInput(text=item["nombre"], size_hint_y=None, height=dp(45))
-        in_desc = TextInput(text=item["desc"], size_hint_y=None, height=dp(100))
-        btn_guardar = Button(
-            text="Guardar cambios",
-            size_hint_y=None,
-            height=dp(45),
-            background_color=(0, 1, 0, 1)
-        )
-
-        layout.add_widget(in_nombre)
-        layout.add_widget(in_desc)
-        layout.add_widget(btn_guardar)
-
-        popup = Popup(title="Editar producto", content=layout, size_hint=(0.9, 0.9))
-
-        def guardar_cambios(instance):
-            item["nombre"] = in_nombre.text.strip()
-            item["desc"] = in_desc.text.strip()
-            self.guardar_inventario()
-            self.actualizar_lista()
-            popup.dismiss()
-
-        btn_guardar.bind(on_press=guardar_cambios)
+        btn.bind(on_press=seleccionar)
         popup.open()
 
-    # -----------------------------------
-    # ELIMINAR ITEM
-    # -----------------------------------
-    def eliminar_item(self, index):
-        del self.items[index]
-        self.guardar_inventario()
+    # ---------- GUARDAR ----------
+
+    def guardar_producto(self, *_):
+        if not self.nombre.text or not self.ref.text:
+            return
+
+        if self.editando:
+            self.editando["nombre"] = self.nombre.text
+            self.editando["ref"] = self.ref.text
+            self.editando["desc"] = self.desc.text
+            if self.ruta_img:
+                self.editando["img"] = self.ruta_img
+        else:
+            self.data.append({
+                "nombre": self.nombre.text,
+                "ref": self.ref.text,
+                "desc": self.desc.text,
+                "img": self.ruta_img
+            })
+
+        self.guardar_datos()
+        self.popup.dismiss()
         self.actualizar_lista()
 
-    # -----------------------------------
-    # POPUP ALERTA
-    # -----------------------------------
-    def alerta(self, mensaje):
-        pop = Popup(title="Información", content=Label(text=mensaje), size_hint=(0.8, 0.3))
-        pop.open()
+    # ---------- ELIMINAR ----------
+
+    def eliminar(self, item):
+        self.data.remove(item)
+        self.guardar_datos()
+        self.actualizar_lista()
 
 
-if _name_ == "_main_":
+if __name__ == "__main__":
     InventarioApp().run()
+
 #INVENTARIO
 
 [
