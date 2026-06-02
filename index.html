@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Botón que cambia de color</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 100px;
+        }
+
+        #miBoton {
+            background-color: blue;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 20px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <button id="miBoton">Haz clic aquí</button>
+
+    <script>
+        const boton = document.getElementById("miBoton");
+
+        boton.addEventListener("click", function() {
+            if (boton.style.backgroundColor === "red") {
+                boton.style.backgroundColor = "blue";
+            } else {
+                boton.style.backgroundColor = "red";
+            }
+        });
+    </script>
+
+</body>
+</html>
